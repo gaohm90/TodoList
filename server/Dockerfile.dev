@@ -12,7 +12,7 @@ RUN npm install
 COPY . .
 
 # 暴露后端服务端口
-EXPOSE 5000
+EXPOSE 5001
 
 # 启动开发服务器
 CMD ["npm", "run", "dev"]
