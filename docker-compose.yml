@@ -13,7 +13,25 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
+      - VITE_API_URL=http://localhost:5000
     command: npm run dev
+    depends_on:
+      - server
+
+  # 后端服务
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+      - todo-data:/app/data
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
 
   # 生产环境
   prod:
@@ -21,6 +39,9 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "80:80"
+      - "2080:80"
     environment:
       - NODE_ENV=production
+
+volumes:
+  todo-data:

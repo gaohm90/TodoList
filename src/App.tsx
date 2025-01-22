@@ -1,31 +1,81 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 
 interface Todo {
-  id: number;
+  id: string;
   text: string;
   completed: boolean;
+  createdAt?: string;
 }
 
 function App() {
   const [todos, setTodos] = useState<Todo[]>([])
   const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(true)
 
-  const addTodo = () => {
-    if (input.trim() !== '') {
-      setTodos([...todos, { id: Date.now(), text: input.trim(), completed: false }])
-      setInput('')
+  useEffect(() => {
+    fetchTodos()
+  }, [])
+
+  const fetchTodos = async () => {
+    try {
+      const response = await fetch('http://localhost:5001/api/todos')
+      const data = await response.json()
+      setTodos(data)
+    } catch (error) {
+      console.error('获取待办事项失败:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const toggleTodo = (id: number) => {
-    setTodos(todos.map(todo =>
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    ))
+  const addTodo = async () => {
+    if (input.trim() !== '') {
+      try {
+        const response = await fetch('http://localhost:5001/api/todos', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text: input.trim() }),
+        })
+        const newTodo = await response.json()
+        setTodos([newTodo, ...todos])
+        setInput('')
+      } catch (error) {
+        console.error('添加待办事项失败:', error)
+      }
+    }
   }
 
-  const deleteTodo = (id: number) => {
-    setTodos(todos.filter(todo => todo.id !== id))
+  const toggleTodo = async (id: string) => {
+    try {
+      const todo = todos.find(t => t.id === id)
+      const response = await fetch(`http://localhost:5001/api/todos/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ completed: !todo?.completed }),
+      })
+      const updatedTodo = await response.json()
+      setTodos(todos.map(todo =>
+        todo.id === id ? updatedTodo : todo
+      ))
+    } catch (error) {
+      console.error('更新待办事项失败:', error)
+    }
+  }
+
+  const deleteTodo = async (id: string) => {
+    try {
+      await fetch(`http://localhost:5001/api/todos/${id}`, {
+        method: 'DELETE',
+      })
+      setTodos(todos.filter(todo => todo.id !== id))
+    } catch (error) {
+      console.error('删除待办事项失败:', error)
+    }
   }
 
   return (
@@ -53,7 +103,11 @@ function App() {
                   </button>
                 </div>
                 <ul className="mt-4 space-y-2">
-                  {todos.map(todo => (
+                  {loading ? (
+                    <div className="text-center text-gray-500">加载中...</div>
+                  ) : todos.length === 0 ? (
+                    <div className="text-center text-gray-500">暂无待办事项</div>
+                  ) : todos.map(todo => (
                     <li key={todo.id} className="flex items-center gap-2 p-2 border rounded-lg">
                       <input
                         type="checkbox"
